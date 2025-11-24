@@ -1,4 +1,3 @@
-
 const bcrypt = require("bcryptjs/dist/bcrypt");
 const mongoose = require("mongoose");
 
@@ -18,7 +17,7 @@ const UserSchema = new mongoose.Schema({
     ],
     unique: true,
   },
-   password: {
+  password: {
     type: String,
     required: [true, "Please Provide password"],
     minlength: 6,
@@ -26,14 +25,25 @@ const UserSchema = new mongoose.Schema({
   },
 });
 
-UserSchema.pre("save",async function (next){
-    //before we savve the document,we can hash the pashword
-    //salt is the generated random bit
-    //this points to the document i.e instance of the collection 
-    //next() move the app to the next middleware
-    const salt = await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password,salt)
-    next()
-})
+UserSchema.pre("save", async function (next) {
+  //before we save to the document,we can hash the pashword
+  //salt is the generated random bit
+  //this points to the document i.e instance of the collection
+  //next() move the app to the next middleware
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
 
-module.exports = mongoose.model("User",UserSchema)
+UserSchema.methods.createJWT = function () {
+  return jwt.sign({ userId: this._id, name: this.name }, "jwtSecret", {
+    expiresIn: process.env.JWT_LIFETIME,
+  });
+};
+
+UserSchema.methods.comparePassword = async function (password) {
+    const isMatch = await bcrypt.compare(password,this.password)
+    return isMatch
+}
+
+module.exports = mongoose.model("User", UserSchema);
